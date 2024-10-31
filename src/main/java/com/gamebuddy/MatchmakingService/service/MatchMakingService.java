@@ -120,6 +120,7 @@ public class MatchMakingService {
         matchedUserIds.add(matchedUsers.get(0).getUserId());
         matchResult.setMatchedUserIds(matchedUserIds);
         matchResult.setMatchRequestId(matchRequest.getMatchRequestId());
+        matchResult.setGameId(matchRequestCreateDTO.getGameId());
 
         LOGGER.info("[findMatch] Match Result: {}",matchResult.toString());
         
