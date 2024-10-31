@@ -2,6 +2,7 @@ package com.gamebuddy.MatchmakingService.controller;
 
 import com.gamebuddy.MatchmakingService.dto.MatchRequestCreateDTO;
 import com.gamebuddy.MatchmakingService.dto.MatchResultViewDTO;
+import com.gamebuddy.MatchmakingService.exception.results.DataResult;
 import com.gamebuddy.MatchmakingService.service.MatchMakingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,9 +31,8 @@ public class MatchMakingController {
             @ApiResponse(responseCode = "400", description = "Invalid input data")
     })
     @PostMapping
-    public ResponseEntity<MatchResultViewDTO> findMatch(@RequestBody MatchRequestCreateDTO matchRequestCreateDTO) {
-        MatchResultViewDTO matchResult = matchMakingService.findMatch(matchRequestCreateDTO);
-        return new ResponseEntity<>(matchResult, HttpStatus.CREATED);
+    public ResponseEntity<DataResult<MatchResultViewDTO>> findMatch(@RequestBody MatchRequestCreateDTO matchRequestCreateDTO) {
+        return new ResponseEntity<>(matchMakingService.findMatch(matchRequestCreateDTO), HttpStatus.OK);
     }
 
 }

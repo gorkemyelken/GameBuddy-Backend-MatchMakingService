@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 public class MatchResult {
     @Id
-    private String id;
+    private String matchResultId;
     private String matchRequestId;
     private List<String> matchedUserIds;
     private String gameId;

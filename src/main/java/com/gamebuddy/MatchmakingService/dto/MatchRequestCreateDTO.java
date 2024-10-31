@@ -18,5 +18,6 @@ public class MatchRequestCreateDTO {
     private int minAge;
     private int maxAge;
     private List<String> genders;
-    private Float rating;
+    private Float minRating;
+    private Float maxRating;
 }

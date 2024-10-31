@@ -13,9 +13,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MatchResultViewDTO {
-    private String id;                          // Eşleşme sonucu ID'si
-    private String matchRequestId;              // Eşleşme talebi ID'si
-    private List<String> matchedUserIds;        // Eşleşen kullanıcılar
-    private String gameId;                      // Oyun ID'si
-    private LocalDateTime createdAt;            // Oluşturulma tarihi
+    private String matchResultId;
+    private String matchRequestId;
+    private List<String> matchedUserIds;
+    private String gameId;
+    private LocalDateTime createdAt;
 }

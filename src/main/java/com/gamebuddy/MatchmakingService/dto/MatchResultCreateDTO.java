@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MatchResultCreateDTO {
-    private String matchRequestId;              // Eşleşme talebi ID'si
-    private List<String> matchedUserIds;        // Eşleşen kullanıcılar
-    private String gameId;                      // Oyun ID'si
+    private String matchRequestId;
+    private List<String> matchedUserIds;
+    private String gameId;
 }

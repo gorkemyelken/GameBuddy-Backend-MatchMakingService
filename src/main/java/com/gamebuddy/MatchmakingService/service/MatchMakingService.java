@@ -1,10 +1,19 @@
 package com.gamebuddy.MatchmakingService.service;
 
-import com.gamebuddy.MatchmakingService.dto.*;
-import com.gamebuddy.MatchmakingService.exception.MatchRequestNotFoundException;
+import com.gamebuddy.MatchmakingService.dto.GameStatDTO;
+import com.gamebuddy.MatchmakingService.dto.MatchRequestCreateDTO;
+import com.gamebuddy.MatchmakingService.dto.MatchResultViewDTO;
+import com.gamebuddy.MatchmakingService.dto.UserDTO;
+import com.gamebuddy.MatchmakingService.exception.results.DataResult;
+import com.gamebuddy.MatchmakingService.exception.results.ErrorDataResult;
+import com.gamebuddy.MatchmakingService.exception.results.SuccessDataResult;
 import com.gamebuddy.MatchmakingService.model.MatchRequest;
+import com.gamebuddy.MatchmakingService.model.MatchResult;
 import com.gamebuddy.MatchmakingService.repository.MatchRequestRepository;
+import com.gamebuddy.MatchmakingService.repository.MatchResultRepository;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -22,69 +31,102 @@ import java.util.stream.Collectors;
 @Service
 public class MatchMakingService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MatchMakingService.class);
+
+    private final MatchResultRepository matchResultRepository;
+
     private final MatchRequestRepository matchRequestRepository;
     private final ModelMapper modelMapper;
-
     private final RestTemplate restTemplate;
-
     @Value("${user.service.url}")
     private String userServiceUrl;
-
     @Value("${game.service.url}")
     private String gameServiceUrl;
 
     @Autowired
-    public MatchMakingService(MatchRequestRepository matchRequestRepository, ModelMapper modelMapper, RestTemplate restTemplate) {
+    public MatchMakingService(MatchResultRepository matchResultRepository, MatchRequestRepository matchRequestRepository, ModelMapper modelMapper, RestTemplate restTemplate) {
+        this.matchResultRepository = matchResultRepository;
         this.matchRequestRepository = matchRequestRepository;
         this.modelMapper = modelMapper;
         this.restTemplate = restTemplate;
     }
 
-    public MatchResultViewDTO findMatch(MatchRequestCreateDTO matchRequestCreateDTO) {
-        MatchRequest matchRequest = modelMapper.map(matchRequestCreateDTO, MatchRequest.class);
-        matchRequest.setId(UUID.randomUUID().toString());
-        matchRequest.setCreatedAt(LocalDateTime.now());
-        int minAge = matchRequest.getMinAge();
-        int maxAge = matchRequest.getMaxAge();
-        List<String> genders = matchRequest.getGenders();
+    public DataResult<MatchResultViewDTO> findMatch(MatchRequestCreateDTO matchRequestCreateDTO) {
+        LOGGER.info("[findMatch] MatchRequestCreateDTO: {}",matchRequestCreateDTO);
+        MatchRequest matchRequest = new MatchRequest();
+        matchRequest.setMatchRequestId(UUID.randomUUID().toString());
+        this.matchRequestRepository.save(matchRequest);
 
-        String userServiceURL = userServiceUrl + "/users/by-criteria?minAge=" + minAge + "&maxAge=" + maxAge + "&genders=" + String.join(",", genders);
+        int minAge = matchRequestCreateDTO.getMinAge();
+        int maxAge = matchRequestCreateDTO.getMaxAge();
+        List<String> genders = matchRequestCreateDTO.getGenders();
+        float minRating = matchRequestCreateDTO.getMinRating();
+        float maxRating = matchRequestCreateDTO.getMaxRating();
 
-        ResponseEntity<List<UserDTO>> userResponse = restTemplate.exchange(
+        String userServiceURL = userServiceUrl + "/users/by-criteria?minAge=" + minAge + "&maxAge=" + maxAge + "&minRating=" + minRating + "&maxRating=" + maxRating + "&genders=" + String.join(",", genders);
+
+        LOGGER.info("[findMatch] userServiceURL: {}",userServiceURL);
+
+        ResponseEntity<DataResult<List<UserDTO>>> userResponse = restTemplate.exchange(
                 userServiceURL,
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<List<UserDTO>>() {}
+                new ParameterizedTypeReference<DataResult<List<UserDTO>>>() {}
         );
 
-        List<UserDTO> users = userResponse.getBody();
+        LOGGER.info("[findMatch] userResponse: {}",userResponse);
+
+        if (userResponse.getBody() == null || !userResponse.getBody().isSuccess()) {
+            return new ErrorDataResult<>("User not found by criterias.");
+        }
+
+        List<UserDTO> users = userResponse.getBody().getData();
+
+        LOGGER.info("[findMatch] Found users: {}",users);
 
         List<String> preferredRanks = matchRequestCreateDTO.getPreferredRanks();
         String gameServiceURL = gameServiceUrl + "/gamestats/by-ranks?ranks=" + String.join(",", preferredRanks);
 
-        ResponseEntity<List<GameStatDTO>> gameStatResponse = restTemplate.exchange(
+        LOGGER.info("[findMatch] gameServiceUrl: {}",gameServiceUrl);
+
+        ResponseEntity<DataResult<List<GameStatDTO>>> gameStatResponse = restTemplate.exchange(
                 gameServiceURL,
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<List<GameStatDTO>>() {}
+                new ParameterizedTypeReference<DataResult<List<GameStatDTO>>>() {}
         );
 
-        List<GameStatDTO> gameStats = gameStatResponse.getBody();
+        LOGGER.info("[findMatch] gameStatResponse: {}",gameStatResponse);
+
+        if (gameStatResponse.getBody() == null || !gameStatResponse.getBody().isSuccess()) {
+            return new ErrorDataResult<>("User not found by criterias.");
+        }
+
+        List<GameStatDTO> gameStats = gameStatResponse.getBody().getData();
+
+        LOGGER.info("[findMatch] Found gameStats: {}",gameStats);
 
         List<UserDTO> matchedUsers = users.stream()
-                .filter(user -> gameStats.stream().anyMatch(stat -> stat.getUserId().equals(user.getId())))
+                .filter(user -> gameStats.stream().anyMatch(stat -> stat.getUserId().equals(user.getUserId())))
                 .collect(Collectors.toList());
 
-        MatchResultViewDTO matchResult = new MatchResultViewDTO();
-        matchResult.setId(UUID.randomUUID().toString());
-        matchResult.setMatchRequestId(matchRequest.getId());
-        matchResult.setCreatedAt(LocalDateTime.now());
+        LOGGER.info("[findMatch] Matched Users: {}",matchedUsers);
 
+        MatchResult matchResult = new MatchResult();
+        matchResult.setMatchResultId(UUID.randomUUID().toString());
+        matchResult.setCreatedAt(LocalDateTime.now());
         List<String> matchedUserIds = new ArrayList<>();
-        matchedUserIds.add(matchRequest.getUserId());
-        matchedUserIds.add(matchedUsers.get(0).getId());
+        matchedUserIds.add(matchRequestCreateDTO.getUserId());
+        matchedUserIds.add(matchedUsers.get(0).getUserId());
         matchResult.setMatchedUserIds(matchedUserIds);
-        return matchResult;
+        matchResult.setMatchRequestId(matchRequest.getMatchRequestId());
+
+        LOGGER.info("[findMatch] Match Result: {}",matchResult.toString());
+        
+        this.matchResultRepository.save(matchResult);
+
+        MatchResultViewDTO matchResultViewDTO = modelMapper.map(matchResult, MatchResultViewDTO.class);
+        return new SuccessDataResult<>(matchResultViewDTO, "Matched successfully.");
     }
 
 }

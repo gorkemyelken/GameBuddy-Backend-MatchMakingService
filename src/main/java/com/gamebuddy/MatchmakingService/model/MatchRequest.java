@@ -17,13 +17,14 @@ import java.util.List;
 @NoArgsConstructor
 public class MatchRequest {
     @Id
-    private String id;
+    private String matchRequestId;
     private String userId;
     private String gameId;
     private List<String> preferredRanks;
     private int minAge;
     private int maxAge;
     private List<String> genders;
-    private Float rating;
+    private Float minRating;
+    private Float maxRating;
     private LocalDateTime createdAt;
 }

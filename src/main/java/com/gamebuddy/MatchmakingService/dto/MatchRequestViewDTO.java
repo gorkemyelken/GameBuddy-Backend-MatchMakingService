@@ -13,12 +13,14 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MatchRequestViewDTO {
-    private String id;
+    private String matchRequestId;
     private String userId;
     private String gameId;
-    private List<String> preferredRanks; // Tercih edilen rütbeler
-    private List<Integer> ages;           // Tercih edilen yaşlar
-    private List<String> genders;         // Tercih edilen cinsiyetler
-    private Float rating;                  // Kullanıcı puanı
-    private LocalDateTime createdAt;      // Oluşturulma tarihi
+    private List<String> preferredRanks;
+    private int minAge;
+    private int maxAge;
+    private List<String> genders;
+    private Float minRating;
+    private Float maxRating;
+    private LocalDateTime createdAt;
 }
